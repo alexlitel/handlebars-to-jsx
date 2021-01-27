@@ -1,7 +1,7 @@
 import { AST as Glimmer }                 from '@glimmer/syntax'
 import * as Babel                         from '@babel/types'
 import { createFragment, convertElement } from './elements'
-import { resolveBlockStatement }          from './blockStatements'
+import { createBlockElement, resolveBlockStatement }          from './blockStatements'
 import { createComment }                  from './comments'
 
 /**
@@ -44,7 +44,7 @@ export const resolveStatement = (statement: Glimmer.Statement) => {
  * to children of a JSX element.
  */
 export const resolveElementChild = (
-  statement: Glimmer.Statement
+  statement: Glimmer.Statement | Glimmer.BlockStatement
 ):
   | Babel.JSXText
   | Babel.JSXElement
@@ -62,6 +62,12 @@ export const resolveElementChild = (
     case 'MustacheCommentStatement':
     case 'CommentStatement': {
       return createComment(statement)
+    }
+
+    case 'BlockStatement': {
+      if (!/(if|each|unless)/i.test(statement.path.original)) {
+        return createBlockElement(statement)
+      }
     }
 
     // If it expression, create a expression container
@@ -124,7 +130,7 @@ export const createPath = (pathExpression: Glimmer.PathExpression): Babel.Identi
   for (let i = 1; i < parts.length; i++) {
     acc = appendToPath(acc, Babel.identifier(parts[i]))
   }
-
+  console.log(acc)
   return acc
 }
 

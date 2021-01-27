@@ -2,7 +2,6 @@
 node_modules/
 .vscode/
 coverage/
-dist/
 
 # files
 package-lock.json
@@ -10,3 +9,4 @@ package-lock.json
 DONTREADME.md
 *error.log
 *.bak
+temp/

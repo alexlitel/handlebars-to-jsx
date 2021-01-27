@@ -1,5 +1,5 @@
 /* eslint-disable max-len */
-import { compile } from '../'
+import { compile } from '../src'
 import generate    from '@babel/generator'
 import { parse }   from '@babel/parser'
 
@@ -237,6 +237,52 @@ describe('block statements', () => {
       )
     })
   })
+})
+
+describe('block custom elements', () => {
+  test('should parse block custom elements', () => {
+    expect(
+      compile('{{#wrapper href=block.url}}{{#inner-img src=block.asset width=600 height=360 crop="fit" class="test"}}<span><h2>test</h2></span>{{/inner-img}}{{/wrapper}}', false
+      )).toBe(
+        '<Wrapper href={block.url}><InnerImg src={block.asset} width={600} height={360} crop="fit" className="test"><span><h2>test</h2></span></InnerImg></Wrapper>'
+      )
+  
+  })
+})
+
+describe('elements with action', () => {
+  test('should parse element with action and arguments', () => {
+    expect(
+      compile('<button {{action "action" item}}>click</button>', false
+      )).toBe(
+        '<button onClick={() => action(item)}>click</button>;'
+      )
+  })
+  test('should parse element with action without arguments', () => {
+    expect(
+      compile('<button {{action "action"}}>click</button>', false
+      )).toBe(
+        '<button onClick={action}>click</button>;'
+      )
+  })
+})
+
+describe('elements with binded attributes', () => {
+  test('should parse element with one binded attribute', () => {
+    expect(
+      compile('<button {{bind-attr src=model.cool}}>click</button>', false
+      )).toBe(
+        '<button src={model.cool}>click</button>;'
+      )
+  })
+  test('should parse element with multiple binded attribute', () => {
+    expect(
+      compile('<button {{bind-attr src=model.cool class="foo:test"}}>click</button>', false
+      )).toBe(
+        '<button src={model.cool}>click</button>;'
+      )
+  })
+
 })
 
 describe('include react import', () => {
