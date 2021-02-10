@@ -95,8 +95,8 @@ var convertElement = function (node) {
         .map(function (item) { return exports.createAttribute(item); })
         .filter(Boolean);
     if (node.modifiers && node.modifiers.length) {
-        var modifiers = node.modifiers.map(function (item) { return exports.convertModifier(item); }).flat().filter(Boolean);
-        attributes.push.apply(attributes, modifiers.flat());
+        var modifiers = node.modifiers.reduce(function (acc, item) { return acc.concat(exports.convertModifier(item)); }, []).filter(Boolean);
+        attributes.push.apply(attributes, modifiers);
     }
     var isElementSelfClosing = node.selfClosing || isSelfClosing(node.tag);
     var children = expressions_1.createChildren(node.children);

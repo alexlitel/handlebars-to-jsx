@@ -153,9 +153,9 @@ export const convertElement = (node: Glimmer.ElementNode): Babel.JSXElement => {
     .filter(Boolean) as Babel.JSXAttribute[];
 
   if (node.modifiers && node.modifiers.length) {
-    const modifiers = node.modifiers.map(item => convertModifier(item)).flat().filter(Boolean) as Babel.JSXAttribute[]
+    const modifiers = node.modifiers.reduce((acc, item) => acc.concat(convertModifier(item) as []), []).filter(Boolean) as Babel.JSXAttribute[]
 
-    attributes.push(...modifiers.flat())
+    attributes.push(...modifiers)
   }
   const isElementSelfClosing = node.selfClosing || isSelfClosing(node.tag);
   const children = createChildren(node.children);
