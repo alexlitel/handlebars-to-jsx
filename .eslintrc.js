@@ -1,7 +1,7 @@
 module.exports = {
-  parser: 'typescript-eslint-parser',
+  parser:  '@typescript-eslint/parser',  // Specifies the ESLint parser
   extends: ['standard', 'plugin:react/recommended'],
-  plugins: ['typescript', 'prettier', 'arca'],
+  plugins: ['@typescript-eslint', 'prettier', 'arca'],
   rules: {
     indent: 'off',
     'indent-legacy': ['error', 2, { SwitchCase: 1 }],

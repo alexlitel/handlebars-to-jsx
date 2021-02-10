@@ -8,7 +8,7 @@ var constants_1 = require("./constants");
 /**
  * Resolves block type
  */
-exports.resolveBlockStatement = function (blockStatement) {
+var resolveBlockStatement = function (blockStatement) {
     switch (blockStatement.path.original) {
         case "if": {
             return exports.createConditionStatement(blockStatement, false);
@@ -20,11 +20,15 @@ exports.resolveBlockStatement = function (blockStatement) {
             return exports.createEachStatement(blockStatement);
         }
         default: {
-            return exports.createBlockElement(blockStatement);
+            if (blockStatement && blockStatement.program.body) {
+                return exports.createBlockElement(blockStatement);
+            }
+            throw new Error("Unexpected " + blockStatement.path.original + " statement");
         }
     }
 };
-exports.createBlockElement = function (blockStatement) {
+exports.resolveBlockStatement = resolveBlockStatement;
+var createBlockElement = function (blockStatement) {
     var blockNode = {};
     blockNode.type = 'ElementNode';
     blockNode.tag = blockStatement.path.original.split('-').map(function (stringPart) {
@@ -46,10 +50,11 @@ exports.createBlockElement = function (blockStatement) {
     blockNode.children = blockStatement.program.body;
     return elements_1.convertElement(blockNode);
 };
+exports.createBlockElement = createBlockElement;
 /**
  * Creates condition statement
  */
-exports.createConditionStatement = function (blockStatement, invertCondition) {
+var createConditionStatement = function (blockStatement, invertCondition) {
     var program = blockStatement.program, inverse = blockStatement.inverse;
     var boolCondSubject = Babel.callExpression(Babel.identifier("Boolean"), [expressions_1.resolveExpression(blockStatement.params[0])]);
     if (invertCondition) {
@@ -66,10 +71,11 @@ exports.createConditionStatement = function (blockStatement, invertCondition) {
         return Babel.conditionalExpression(boolCondSubject, expressions_1.createRootChildren(program.body), expressions_1.createRootChildren(inverse.body));
     }
 };
+exports.createConditionStatement = createConditionStatement;
 /**
  * Creates each block statement
  */
-exports.createEachStatement = function (blockStatement) {
+var createEachStatement = function (blockStatement) {
     var pathExpression = blockStatement.params[0];
     var iterator = expressions_1.appendToPath(expressions_1.createPath(pathExpression), Babel.identifier("map"));
     var mapCallbackChildren = expressions_1.createRootChildren(blockStatement.program.body);
@@ -86,3 +92,4 @@ exports.createEachStatement = function (blockStatement) {
     ], wrappedCallbackChildren);
     return Babel.callExpression(iterator, [mapCallback]);
 };
+exports.createEachStatement = createEachStatement;

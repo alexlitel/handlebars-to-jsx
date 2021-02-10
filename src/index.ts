@@ -1,8 +1,9 @@
 /* eslint-disable import/export */
-import { preprocess }    from '@glimmer/syntax'
-import generate          from '@babel/generator'
-import * as Babel        from '@babel/types'
-import { createProgram } from './program'
+import { preprocess } from "@glimmer/syntax";
+import generate from "@babel/generator";
+import { parse } from "@babel/parser";
+import * as Babel from "@babel/types";
+import { createProgram } from "./program";
 
 /**
  * Converts Handlebars code to JSX code
@@ -12,29 +13,41 @@ import { createProgram } from './program'
  * @param [options.isModule] Should return generated code exported as default
  * @param [options.includeImport] Should include react import
  */
-export function compile(hbsCode: string, isComponent?: boolean): string
+export function compile(code: string, isComponent?: boolean): string;
 export function compile(
-  hbsCode: string,
+  code: string,
   options?: {
-    isComponent?: boolean
-    isModule?: boolean
-    includeImport?: boolean
+    isComponent?: boolean;
+    isModule?: boolean;
+    includeImport?: boolean;
   }
-): string
+): string;
 export function compile(
-  hbsCode: string,
-  options: boolean | { isComponent?: boolean; isModule?: boolean; includeImport?: boolean } = true
+  code: string,
+  options:
+    | boolean
+    | {
+        isComponent?: boolean;
+        isModule?: boolean;
+        includeImport?: boolean;
+      } = true
 ): string {
-  if (typeof options === 'boolean') {
-    return compile(hbsCode, { isComponent: options })
+  if (typeof options === "boolean") {
+    return compile(code, { isComponent: options });
   }
 
-  const isComponent = !!options.isComponent
-  const isModule = !!options.isModule
-  const includeImport = !!options.includeImport && isModule
+  const isComponent = !!options.isComponent;
+  const isModule = !!options.isModule;
+  const includeImport = !!options.includeImport && isModule;
 
-  const glimmerProgram = preprocess(hbsCode)
-  const babelProgram: Babel.Program = createProgram(glimmerProgram, isComponent, isModule, includeImport)
+  const glimmerProgram = preprocess(code);
+  const babelProgram: Babel.Program = createProgram(
+    glimmerProgram,
+    isComponent,
+    isModule,
+    includeImport
+  );
 
-  return generate(babelProgram).code
+
+  return generate(babelProgram as any).code;
 }

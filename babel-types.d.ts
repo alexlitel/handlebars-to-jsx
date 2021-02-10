@@ -1,6 +1,8 @@
 export * from '@babel/types'
 
-declare module '@babel/types' {
+import { MemberExpression } from '@babel/types'
+
+declare global {
   /**
    * Append a node to a member expression.
    */

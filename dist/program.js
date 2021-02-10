@@ -12,7 +12,7 @@ var componentCreator_1 = require("./componentCreator");
  * @param isModule Should return generated code exported as default
  * @param includeImport Should include react import
  */
-exports.createProgram = function (hbsProgram, isComponent, isModule, includeImport) {
+var createProgram = function (hbsProgram, isComponent, isModule, includeImport) {
     pathsPrepare_1.prepareProgramPaths(hbsProgram, isComponent);
     var reactImport = Babel.importDeclaration([Babel.importDefaultSpecifier(Babel.identifier('React'))], Babel.stringLiteral('react'));
     var componentBody = expressions_1.createRootChildren(hbsProgram.body);
@@ -22,3 +22,4 @@ exports.createProgram = function (hbsProgram, isComponent, isModule, includeImpo
     includeImport && directives.unshift(reactImport);
     return Babel.program(directives);
 };
+exports.createProgram = createProgram;

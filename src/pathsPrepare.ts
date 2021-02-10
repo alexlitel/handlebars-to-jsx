@@ -12,7 +12,7 @@ const isEachStatement = (node: Glimmer.Node): node is Glimmer.BlockStatement =>
  */
 const createNamespaceStack = () => {
   const namespaces: { node: Glimmer.Node; name: string }[] = []
-
+  
   return {
     // Getter of length
     get length() {

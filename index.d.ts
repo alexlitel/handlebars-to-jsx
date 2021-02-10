@@ -18,4 +18,4 @@ export function compile(hbsCode: string, isComponent?: boolean): string
  * @param [options.includeImport] Should include react import
  * @returns JSX code
  */
-export function compile(hbsCode: string, options?: { isComponent?: boolean; isModule?: boolean, includeImport?: boolean }): string
+export function compile(hbsCode: string, jsCode: string, options?: { isComponent?: boolean; isModule?: boolean, includeImport?: boolean }): string

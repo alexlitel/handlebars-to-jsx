@@ -35,7 +35,7 @@ var createNamespaceStack = function () {
 /**
  * Prepares paths Glimmer AST for compatible with JS AST.
  */
-exports.prepareProgramPaths = function (program, isComponent) {
+var prepareProgramPaths = function (program, isComponent) {
     var namespaces = createNamespaceStack();
     // Global component namespace
     if (isComponent) {
@@ -70,3 +70,4 @@ exports.prepareProgramPaths = function (program, isComponent) {
         }
     });
 };
+exports.prepareProgramPaths = prepareProgramPaths;

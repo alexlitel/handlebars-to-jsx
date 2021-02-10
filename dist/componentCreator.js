@@ -5,6 +5,7 @@ var Babel = require("@babel/types");
 /**
  * Creates arrow component
  */
-exports.createComponent = function (body) {
+var createComponent = function (body) {
     return Babel.arrowFunctionExpression([Babel.identifier('props')], body);
 };
+exports.createComponent = createComponent;

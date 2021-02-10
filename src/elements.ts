@@ -3,7 +3,7 @@ import * as Babel from "@babel/types";
 import * as isSelfClosing from "is-self-closing";
 import * as convertHTMLAttribute from "react-attr-converter";
 import { createConcat, resolveExpression, createChildren } from "./expressions";
-import { createStyleObject } from "./styles";
+import { createClassNameObject, createStyleObject } from "./styles";
 
 /**
  * Creates JSX fragment
@@ -122,8 +122,13 @@ export const convertModifier = (
         let attrValue: any = (item.value as any).original;
         if (attrName === 'class') {
           attrName = 'className'
-          let classNames = attrValue.split(' ')
-          // TODO figure out class names
+       
+          attrValue = Babel.callExpression(
+            Babel.identifier('clsx'),
+            [createClassNameObject(attrValue)]
+          )
+        } else {
+          attrValue = Babel.identifier(attrValue)
         }
 
         
@@ -143,7 +148,6 @@ export const convertModifier = (
  */
 export const convertElement = (node: Glimmer.ElementNode): Babel.JSXElement => {
   const tagName = Babel.jsxIdentifier(node.tag);
-  console.log(JSON.stringify(node.modifiers, null, 2));
   const attributes = node.attributes
     .map(item => createAttribute(item))
     .filter(Boolean) as Babel.JSXAttribute[];

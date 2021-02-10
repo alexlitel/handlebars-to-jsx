@@ -8,7 +8,7 @@ import { parse }   from '@babel/parser'
  * is obtained when compiling ast.
  */
 const recompile = (jsCode: string): string =>
-  generate(parse(jsCode, { plugins: ['jsx'], sourceType: 'module' }).program).code
+  generate(parse(jsCode, { plugins: ['jsx'], sourceType: 'module' }).program as any).code
 
 describe('elements', () => {
   test('should convert simple div', () => {
@@ -277,7 +277,7 @@ describe('elements with binded attributes', () => {
   })
   test('should parse element with multiple binded attribute', () => {
     expect(
-      compile('<button {{bind-attr src=model.cool class="foo:test"}}>click</button>', false
+      compile('<button {{bind-attr src=model.cool class=":foo-2 foo:test"}}>click</button>', false
       )).toBe(
         '<button src={model.cool}>click</button>;'
       )

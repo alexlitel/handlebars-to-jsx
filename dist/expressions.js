@@ -17,45 +17,51 @@ var comments_1 = require("./comments");
  * Creates top-level expression or expression which need to wrap to JSX
  * expression container.
  */
-exports.resolveStatement = function (statement) {
+var resolveStatement = function (statement) {
     switch (statement.type) {
-        case 'ElementNode': {
+        case "ElementNode": {
             return elements_1.convertElement(statement);
         }
-        case 'TextNode': {
+        case "TextNode": {
             return Babel.stringLiteral(statement.chars);
         }
-        case 'MustacheStatement': {
+        case "MustacheStatement": {
             return exports.resolveExpression(statement.path);
         }
-        case 'BlockStatement': {
+        case "BlockStatement": {
             return blockStatements_1.resolveBlockStatement(statement);
         }
-        case 'MustacheCommentStatement':
-        case 'CommentStatement': {
-            throw new Error('Top level comments currently is not supported');
+        case "MustacheCommentStatement":
+        case "CommentStatement": {
+            throw new Error("Top level comments currently is not supported");
         }
         default: {
             throw new Error("Unexpected expression \"" + statement.type + "\"");
         }
     }
 };
+exports.resolveStatement = resolveStatement;
 /**
  * Converts the Handlebars node to JSX-children-compatible child element.
  * Creates JSX expression or expression container with JS expression, to place
  * to children of a JSX element.
  */
-exports.resolveElementChild = function (statement) {
+var resolveElementChild = function (statement) {
     switch (statement.type) {
-        case 'ElementNode': {
+        case "ElementNode": {
             return elements_1.convertElement(statement);
         }
-        case 'TextNode': {
+        case "TextNode": {
             return exports.prepareJsxText(statement.chars);
         }
-        case 'MustacheCommentStatement':
-        case 'CommentStatement': {
+        case "MustacheCommentStatement":
+        case "CommentStatement": {
             return comments_1.createComment(statement);
+        }
+        case "BlockStatement": {
+            if (!/(if|each|unless)/i.test(statement.path.original)) {
+                return blockStatements_1.createBlockElement(statement);
+            }
         }
         // If it expression, create a expression container
         default: {
@@ -63,41 +69,43 @@ exports.resolveElementChild = function (statement) {
         }
     }
 };
+exports.resolveElementChild = resolveElementChild;
 /**
  * Converts Hbs expression to Babel expression
  */
-exports.resolveExpression = function (expression) {
+var resolveExpression = function (expression) {
     switch (expression.type) {
-        case 'PathExpression': {
+        case "PathExpression": {
             return exports.createPath(expression);
         }
-        case 'BooleanLiteral': {
+        case "BooleanLiteral": {
             return Babel.booleanLiteral(expression.value);
         }
-        case 'NullLiteral': {
+        case "NullLiteral": {
             return Babel.nullLiteral();
         }
-        case 'NumberLiteral': {
+        case "NumberLiteral": {
             return Babel.numericLiteral(expression.value);
         }
-        case 'StringLiteral': {
+        case "StringLiteral": {
             return Babel.stringLiteral(expression.value);
         }
-        case 'UndefinedLiteral': {
-            return Babel.identifier('undefined');
+        case "UndefinedLiteral": {
+            return Babel.identifier("undefined");
         }
         default: {
-            throw new Error('Unexpected mustache statement');
+            throw new Error("Unexpected mustache statement");
         }
     }
 };
+exports.resolveExpression = resolveExpression;
 /**
  * Returns path to variable
  */
-exports.createPath = function (pathExpression) {
+var createPath = function (pathExpression) {
     var parts = pathExpression.parts;
     if (parts.length === 0) {
-        throw new Error('Unexpected empty expression parts');
+        throw new Error("Unexpected empty expression parts");
     }
     // Start identifier
     var acc = Babel.identifier(parts[0]);
@@ -106,56 +114,63 @@ exports.createPath = function (pathExpression) {
     }
     return acc;
 };
+exports.createPath = createPath;
 /**
  * Appends item to path
  */
-exports.appendToPath = function (path, append) {
-    return Babel.memberExpression(path, append);
-};
+var appendToPath = function (path, append) { return Babel.memberExpression(path, append); };
+exports.appendToPath = appendToPath;
 /**
  * Prepends item to path
  */
-exports.prependToPath = function (path, prepend) {
-    return Babel.memberExpression(prepend, path);
-};
+var prependToPath = function (path, prepend) { return Babel.memberExpression(prepend, path); };
+exports.prependToPath = prependToPath;
 /**
  * Converts child statements of element to JSX-compatible expressions
  * @param body List of Glimmer statements
  */
-exports.createChildren = function (body) {
+var createChildren = function (body) {
     return body.reduce(function (acc, statement) {
         var child = exports.resolveElementChild(statement);
         return Array.isArray(child) ? __spreadArrays(acc, child) : __spreadArrays(acc, [child]);
     }, []);
 };
+exports.createChildren = createChildren;
 /**
  * Converts root children
  */
-exports.createRootChildren = function (body) {
-    return body.length === 1 ? exports.resolveStatement(body[0]) : elements_1.createFragment(exports.createChildren(body));
+var createRootChildren = function (body) {
+    return body.length === 1
+        ? exports.resolveStatement(body[0])
+        : elements_1.createFragment(exports.createChildren(body));
 };
+exports.createRootChildren = createRootChildren;
 /**
  * Creates attribute value concatenation
  */
-exports.createConcat = function (parts) {
+var createConcat = function (parts) {
     return parts.reduce(function (acc, item) {
         if (acc == null) {
             return exports.resolveStatement(item);
         }
-        return Babel.binaryExpression('+', acc, exports.resolveStatement(item));
+        return Babel.binaryExpression("+", acc, exports.resolveStatement(item));
     }, null);
 };
+exports.createConcat = createConcat;
 /**
  * Escapes syntax chars in jsx text
  * @param text
  */
-exports.prepareJsxText = function (text) {
+var prepareJsxText = function (text) {
     // Escape jsx syntax chars
     var parts = text.split(/(:?{|})/);
     if (parts.length === 1) {
         return Babel.jsxText(text);
     }
     return parts.map(function (item) {
-        return item === '{' || item === '}' ? Babel.jsxExpressionContainer(Babel.stringLiteral(item)) : Babel.jsxText(item);
+        return item === "{" || item === "}"
+            ? Babel.jsxExpressionContainer(Babel.stringLiteral(item))
+            : Babel.jsxText(item);
     });
 };
+exports.prepareJsxText = prepareJsxText;
