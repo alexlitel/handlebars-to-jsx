@@ -16,23 +16,23 @@ exports.camelizePropName = camelizePropName;
  * Create AST tree of style object
  */
 var createStyleObject = function (hbsStatement) {
-    var rawHbsStatement = hbsStatement.type === "TextNode"
+    var rawHbsStatement = hbsStatement.type === 'TextNode'
         ? hbsStatement.chars
         : syntax_1.print(hbsStatement).slice(1, -1);
     var objectProps = rawHbsStatement
-        .split(";")
+        .split(';')
         .filter(function (item) { return item.length !== 0; })
         .map(function (cssRule) {
         var _a = cssRule
-            .split(":")
+            .split(':')
             .map(function (str) { return str.trim(); }), rawKey = _a[0], rawValue = _a[1];
         var _b = [rawKey, rawValue].map(function (item) {
-            return syntax_1.preprocess(item || "").body.filter(function (item) {
-                return item.type === "MustacheStatement" || item.type === "TextNode";
+            return syntax_1.preprocess(item || '').body.filter(function (item) {
+                return item.type === 'MustacheStatement' || item.type === 'TextNode';
             });
         }), hbsKey = _b[0], hbsValue = _b[1];
         var key = hbsKey.length === 1
-            ? hbsKey[0].type === "TextNode"
+            ? hbsKey[0].type === 'TextNode'
                 ? Babel.stringLiteral(exports.camelizePropName(hbsKey[0].chars)) // Capitalize key name
                 : expressions_1.resolveStatement(hbsKey[0])
             : expressions_1.createConcat(hbsKey);
@@ -48,8 +48,8 @@ exports.createStyleObject = createStyleObject;
 var resolveClassName = function (key) {
     return /^\w+$/.test(key) ? Babel.identifier(key) : Babel.stringLiteral(key);
 };
-var resolveClassNameInnerValue = function (value) { return value.startsWith("!")
-    ? Babel.unaryExpression("!", Babel.identifier(value.slice(1)))
+var resolveClassNameInnerValue = function (value) { return value.startsWith('!')
+    ? Babel.unaryExpression('!', Babel.identifier(value.slice(1)))
     : Babel.identifier(value); };
 var resolveClassNameValue = function (value) {
     if (value.length === 1) {
@@ -62,8 +62,8 @@ var resolveClassNameValue = function (value) {
     }
     else {
         return value.slice(2).reduce(function (acc, className) {
-            return Babel.logicalExpression("||", acc, resolveClassNameInnerValue(className));
-        }, Babel.logicalExpression("||", resolveClassNameInnerValue(value[0]), resolveClassNameInnerValue(value[1])));
+            return Babel.logicalExpression('||', acc, resolveClassNameInnerValue(className));
+        }, Babel.logicalExpression('||', resolveClassNameInnerValue(value[0]), resolveClassNameInnerValue(value[1])));
     }
 };
 /**
@@ -72,9 +72,9 @@ var resolveClassNameValue = function (value) {
  */
 var createClassNameObject = function (classNames) {
     var classNameMap = classNames
-        .split(" ")
+        .split(' ')
         .reduce(function (acc, className) {
-        var _a = className.split(":"), value = _a[0], class1 = _a[1], class2 = _a[2];
+        var _a = className.split(':'), value = _a[0], class1 = _a[1], class2 = _a[2];
         if (class1 && !acc[class1]) {
             acc[class1] = [];
         }
@@ -84,7 +84,7 @@ var createClassNameObject = function (classNames) {
         if (className === ":" + className.slice(1)) {
             acc[class1].push(true);
         }
-        else if (className.includes("::") && class2) {
+        else if (className.includes('::') && class2) {
             acc[class2].push("!" + value);
         }
         else if (value && (class1 || class2)) {

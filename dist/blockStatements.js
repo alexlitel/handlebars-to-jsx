@@ -10,13 +10,13 @@ var constants_1 = require("./constants");
  */
 var resolveBlockStatement = function (blockStatement) {
     switch (blockStatement.path.original) {
-        case "if": {
+        case 'if': {
             return exports.createConditionStatement(blockStatement, false);
         }
-        case "unless": {
+        case 'unless': {
             return exports.createConditionStatement(blockStatement, true);
         }
-        case "each": {
+        case 'each': {
             return exports.createEachStatement(blockStatement);
         }
         default: {
@@ -31,18 +31,19 @@ exports.resolveBlockStatement = resolveBlockStatement;
 var createBlockElement = function (blockStatement) {
     var blockNode = {};
     blockNode.type = 'ElementNode';
-    blockNode.tag = blockStatement.path.original.split('-').map(function (stringPart) {
-        return stringPart.charAt(0).toUpperCase() + stringPart.slice(1);
-    }).join('');
+    blockNode.tag = blockStatement.path.original
+        .split('-')
+        .map(function (stringPart) { return stringPart.charAt(0).toUpperCase() + stringPart.slice(1); })
+        .join('');
     blockNode.attributes = blockStatement.hash.pairs.map(function (item) {
         var attrNode = {
-            type: 'AttrNode'
+            type: 'AttrNode',
         };
         attrNode.name = item.key;
         attrNode.value = {
             type: item.value.type === 'StringLiteral' ? 'TextNode' : 'MustacheStatement',
             chars: String(item.value.original || ''),
-            path: item.value
+            path: item.value,
         };
         return attrNode;
     });
@@ -56,14 +57,14 @@ exports.createBlockElement = createBlockElement;
  */
 var createConditionStatement = function (blockStatement, invertCondition) {
     var program = blockStatement.program, inverse = blockStatement.inverse;
-    var boolCondSubject = Babel.callExpression(Babel.identifier("Boolean"), [expressions_1.resolveExpression(blockStatement.params[0])]);
+    var boolCondSubject = Babel.callExpression(Babel.identifier('Boolean'), [expressions_1.resolveExpression(blockStatement.params[0])]);
     if (invertCondition) {
-        boolCondSubject = Babel.unaryExpression("!", boolCondSubject);
+        boolCondSubject = Babel.unaryExpression('!', boolCondSubject);
     }
     if (inverse == null) {
         // Logical expression
         // {Boolean(variable) && <div />}
-        return Babel.logicalExpression("&&", boolCondSubject, expressions_1.createRootChildren(program.body));
+        return Babel.logicalExpression('&&', boolCondSubject, expressions_1.createRootChildren(program.body));
     }
     else {
         // Ternary expression
@@ -77,7 +78,7 @@ exports.createConditionStatement = createConditionStatement;
  */
 var createEachStatement = function (blockStatement) {
     var pathExpression = blockStatement.params[0];
-    var iterator = expressions_1.appendToPath(expressions_1.createPath(pathExpression), Babel.identifier("map"));
+    var iterator = expressions_1.appendToPath(expressions_1.createPath(pathExpression), Babel.identifier('map'));
     var mapCallbackChildren = expressions_1.createRootChildren(blockStatement.program.body);
     // If top-level child element is JS expression, wrap into fragment to add
     // the "key" attribute.
@@ -85,10 +86,10 @@ var createEachStatement = function (blockStatement) {
         ? elements_1.createFragment([Babel.jsxExpressionContainer(mapCallbackChildren)])
         : mapCallbackChildren;
     // Adding the "key" attribute to child element
-    wrappedCallbackChildren.openingElement.attributes.push(Babel.jsxAttribute(Babel.jsxIdentifier("key"), Babel.jsxExpressionContainer(Babel.identifier(constants_1.DEFAULT_KEY_NAME))));
+    wrappedCallbackChildren.openingElement.attributes.push(Babel.jsxAttribute(Babel.jsxIdentifier('key'), Babel.jsxExpressionContainer(Babel.identifier(constants_1.DEFAULT_KEY_NAME))));
     var mapCallback = Babel.arrowFunctionExpression([
         Babel.identifier(constants_1.DEFAULT_NAMESPACE_NAME),
-        Babel.identifier(constants_1.DEFAULT_KEY_NAME)
+        Babel.identifier(constants_1.DEFAULT_KEY_NAME),
     ], wrappedCallbackChildren);
     return Babel.callExpression(iterator, [mapCallback]);
 };

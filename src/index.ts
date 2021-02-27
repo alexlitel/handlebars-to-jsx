@@ -1,9 +1,9 @@
 /* eslint-disable import/export */
-import { preprocess } from "@glimmer/syntax";
-import generate from "@babel/generator";
-import { parse } from "@babel/parser";
-import * as Babel from "@babel/types";
-import { createProgram } from "./program";
+import { preprocess }    from '@glimmer/syntax'
+import generate          from '@babel/generator'
+import { parse }         from '@babel/parser'
+import * as Babel        from '@babel/types'
+import { createProgram } from './program'
 
 /**
  * Converts Handlebars code to JSX code
@@ -32,22 +32,21 @@ export function compile(
         includeImport?: boolean;
       } = true
 ): string {
-  if (typeof options === "boolean") {
-    return compile(code, { isComponent: options });
+  if (typeof options === 'boolean') {
+    return compile(code, { isComponent: options })
   }
 
-  const isComponent = !!options.isComponent;
-  const isModule = !!options.isModule;
-  const includeImport = !!options.includeImport && isModule;
+  const isComponent = !!options.isComponent
+  const isModule = !!options.isModule
+  const includeImport = !!options.includeImport && isModule
 
-  const glimmerProgram = preprocess(code);
+  const glimmerProgram = preprocess(code)
   const babelProgram: Babel.Program = createProgram(
     glimmerProgram,
     isComponent,
     isModule,
     includeImport
-  );
+  )
 
-
-  return generate(babelProgram as any).code;
+  return generate(babelProgram as any).code
 }

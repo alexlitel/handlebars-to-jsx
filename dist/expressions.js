@@ -7,11 +7,41 @@ var __spreadArrays = (this && this.__spreadArrays) || function () {
     return r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.prepareJsxText = exports.createConcat = exports.createRootChildren = exports.createChildren = exports.prependToPath = exports.appendToPath = exports.createPath = exports.resolveExpression = exports.resolveElementChild = exports.resolveStatement = void 0;
+exports.prepareJsxText = exports.createConcat = exports.createRootChildren = exports.createChildren = exports.prependToPath = exports.appendToPath = exports.createPath = exports.resolveExpression = exports.resolveElementChild = exports.resolveStatement = exports.resolveHelpers = exports.resolveMustacheStatement = void 0;
 var Babel = require("@babel/types");
 var elements_1 = require("./elements");
 var blockStatements_1 = require("./blockStatements");
 var comments_1 = require("./comments");
+/**
+ * Converts mustache statement to something parseable
+ */
+var resolveMustacheStatement = function (statement) {
+    var statementPath = statement.path;
+    var original = statementPath.original || '';
+    var parts = statementPath.parts || [];
+    if (statement.params && !!statement.params.length) {
+        return exports.resolveHelpers(statement);
+    }
+    if (statementPath.type === 'PathExpression'
+        && original.includes('-')
+        && parts.length === 1) {
+        return elements_1.createElement(statement);
+    }
+    return exports.resolveExpression(statement.path);
+};
+exports.resolveMustacheStatement = resolveMustacheStatement;
+/**
+ * Coerce helpers to inline functions
+ */
+var resolveHelpers = function (statement) {
+    return Babel.jsxExpressionContainer(Babel.callExpression(Babel.identifier(statement.path.original), statement.params.map(function (item) {
+        var value = item.original || item.value;
+        return typeof value === 'number'
+            ? Babel.numericLiteral(value)
+            : Babel.identifier(value);
+    })));
+};
+exports.resolveHelpers = resolveHelpers;
 /**
  * Converts the Handlebars expression to NON-JSX JS-compatible expression.
  * Creates top-level expression or expression which need to wrap to JSX
@@ -19,21 +49,21 @@ var comments_1 = require("./comments");
  */
 var resolveStatement = function (statement) {
     switch (statement.type) {
-        case "ElementNode": {
+        case 'ElementNode': {
             return elements_1.convertElement(statement);
         }
-        case "TextNode": {
+        case 'TextNode': {
             return Babel.stringLiteral(statement.chars);
         }
-        case "MustacheStatement": {
-            return exports.resolveExpression(statement.path);
+        case 'MustacheStatement': {
+            return exports.resolveMustacheStatement(statement);
         }
-        case "BlockStatement": {
+        case 'BlockStatement': {
             return blockStatements_1.resolveBlockStatement(statement);
         }
-        case "MustacheCommentStatement":
-        case "CommentStatement": {
-            throw new Error("Top level comments currently is not supported");
+        case 'MustacheCommentStatement':
+        case 'CommentStatement': {
+            throw new Error('Top level comments currently is not supported');
         }
         default: {
             throw new Error("Unexpected expression \"" + statement.type + "\"");
@@ -47,23 +77,28 @@ exports.resolveStatement = resolveStatement;
  * to children of a JSX element.
  */
 var resolveElementChild = function (statement) {
+    console.log(statement);
     switch (statement.type) {
-        case "ElementNode": {
+        case 'ElementNode': {
             return elements_1.convertElement(statement);
         }
-        case "TextNode": {
+        case 'TextNode': {
             return exports.prepareJsxText(statement.chars);
         }
-        case "MustacheCommentStatement":
-        case "CommentStatement": {
+        case 'MustacheCommentStatement':
+        case 'CommentStatement': {
             return comments_1.createComment(statement);
         }
-        case "BlockStatement": {
+        case 'MustacheStatement': {
+            return exports.resolveMustacheStatement(statement);
+        }
+        case 'BlockStatement': {
             if (!/(if|each|unless)/i.test(statement.path.original)) {
                 return blockStatements_1.createBlockElement(statement);
             }
         }
         // If it expression, create a expression container
+        // eslint-disable-next-line
         default: {
             return Babel.jsxExpressionContainer(exports.resolveStatement(statement));
         }
@@ -75,26 +110,26 @@ exports.resolveElementChild = resolveElementChild;
  */
 var resolveExpression = function (expression) {
     switch (expression.type) {
-        case "PathExpression": {
+        case 'PathExpression': {
             return exports.createPath(expression);
         }
-        case "BooleanLiteral": {
+        case 'BooleanLiteral': {
             return Babel.booleanLiteral(expression.value);
         }
-        case "NullLiteral": {
+        case 'NullLiteral': {
             return Babel.nullLiteral();
         }
-        case "NumberLiteral": {
+        case 'NumberLiteral': {
             return Babel.numericLiteral(expression.value);
         }
-        case "StringLiteral": {
+        case 'StringLiteral': {
             return Babel.stringLiteral(expression.value);
         }
-        case "UndefinedLiteral": {
-            return Babel.identifier("undefined");
+        case 'UndefinedLiteral': {
+            return Babel.identifier('undefined');
         }
         default: {
-            throw new Error("Unexpected mustache statement");
+            throw new Error('Unexpected mustache statement');
         }
     }
 };
@@ -105,7 +140,7 @@ exports.resolveExpression = resolveExpression;
 var createPath = function (pathExpression) {
     var parts = pathExpression.parts;
     if (parts.length === 0) {
-        throw new Error("Unexpected empty expression parts");
+        throw new Error('Unexpected empty expression parts');
     }
     // Start identifier
     var acc = Babel.identifier(parts[0]);
@@ -153,7 +188,7 @@ var createConcat = function (parts) {
         if (acc == null) {
             return exports.resolveStatement(item);
         }
-        return Babel.binaryExpression("+", acc, exports.resolveStatement(item));
+        return Babel.binaryExpression('+', acc, exports.resolveStatement(item));
     }, null);
 };
 exports.createConcat = createConcat;
@@ -168,7 +203,7 @@ var prepareJsxText = function (text) {
         return Babel.jsxText(text);
     }
     return parts.map(function (item) {
-        return item === "{" || item === "}"
+        return item === '{' || item === '}'
             ? Babel.jsxExpressionContainer(Babel.stringLiteral(item))
             : Babel.jsxText(item);
     });

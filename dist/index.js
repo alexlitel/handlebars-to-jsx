@@ -7,7 +7,7 @@ var generator_1 = require("@babel/generator");
 var program_1 = require("./program");
 function compile(code, options) {
     if (options === void 0) { options = true; }
-    if (typeof options === "boolean") {
+    if (typeof options === 'boolean') {
         return compile(code, { isComponent: options });
     }
     var isComponent = !!options.isComponent;

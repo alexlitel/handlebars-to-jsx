@@ -12,7 +12,7 @@ const isEachStatement = (node: Glimmer.Node): node is Glimmer.BlockStatement =>
  */
 const createNamespaceStack = () => {
   const namespaces: { node: Glimmer.Node; name: string }[] = []
-  
+
   return {
     // Getter of length
     get length() {
@@ -55,6 +55,10 @@ export const prepareProgramPaths = (program: Glimmer.Program, isComponent: boole
           namespaces.push({ node })
           eachStatementEntered = false
         }
+
+        // if (node.type === 'MustacheStatement' || node.type === 'AttrNode') {
+          // console.log(JSON.stringify(node, null, 2))
+        // }
 
         if (isEachStatement(node)) {
           eachStatementEntered = true

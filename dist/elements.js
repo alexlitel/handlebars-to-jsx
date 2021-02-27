@@ -1,20 +1,49 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.convertElement = exports.convertModifier = exports.createAttribute = exports.createFragment = void 0;
+exports.convertElement = exports.convertModifier = exports.createAttribute = exports.createFragment = exports.createElement = void 0;
 var Babel = require("@babel/types");
 var isSelfClosing = require("is-self-closing");
 var convertHTMLAttribute = require("react-attr-converter");
 var expressions_1 = require("./expressions");
 var styles_1 = require("./styles");
 /**
+ * Create element
+ *
+ */
+var createElement = function (mustacheStatement) {
+    var blockNode = {};
+    blockNode.type = 'ElementNode';
+    blockNode.tag = mustacheStatement.path.original
+        .split('-')
+        .map(function (stringPart) { return stringPart.charAt(0).toUpperCase() + stringPart.slice(1); })
+        .join('');
+    blockNode.attributes = mustacheStatement.hash.pairs.map(function (item) {
+        var attrNode = {
+            type: 'AttrNode',
+        };
+        attrNode.name = item.key;
+        attrNode.value = {
+            type: item.value.type === 'StringLiteral' ? 'TextNode' : 'MustacheStatement',
+            chars: String(item.value.original || ''),
+            path: item.value,
+        };
+        return attrNode;
+    });
+    blockNode.selfClosing = true;
+    blockNode.children = [];
+    return exports.convertElement(blockNode);
+};
+exports.createElement = createElement;
+/**
  * Creates JSX fragment
  */
 var createFragment = function (children, attributes) {
     if (attributes === void 0) { attributes = []; }
-    var fragmentMemberExpression = Babel.jsxMemberExpression(Babel.jsxIdentifier("React"), Babel.jsxIdentifier("Fragment"));
+    var fragmentMemberExpression = Babel.jsxMemberExpression(Babel.jsxIdentifier('React'), Babel.jsxIdentifier('Fragment'));
     var openingFragment = Babel.jsxOpeningElement(fragmentMemberExpression, attributes);
     var closingFragment = Babel.jsxClosingElement(fragmentMemberExpression);
     return Babel.jsxElement(openingFragment, closingFragment, children, false);
+    // }
 };
 exports.createFragment = createFragment;
 /**
@@ -29,26 +58,26 @@ var createAttribute = function (attrNode) {
     var name = Babel.jsxIdentifier(reactAttrName);
     var value = attrNode.value;
     switch (value.type) {
-        case "TextNode": {
-            if (reactAttrName === "style") {
+        case 'TextNode': {
+            if (reactAttrName === 'style') {
                 var styleObjectExpression = styles_1.createStyleObject(value);
                 return Babel.jsxAttribute(name, Babel.jsxExpressionContainer(styleObjectExpression));
             }
             return Babel.jsxAttribute(name, Babel.stringLiteral(value.chars));
         }
-        case "MustacheStatement": {
+        case 'MustacheStatement': {
             return Babel.jsxAttribute(name, Babel.jsxExpressionContainer(expressions_1.resolveExpression(value.path)));
         }
-        case "ConcatStatement": {
+        case 'ConcatStatement': {
             var expression = expressions_1.createConcat(value.parts);
-            if (reactAttrName === "style") {
+            if (reactAttrName === 'style') {
                 var styleObjectExpression = styles_1.createStyleObject(value);
                 return Babel.jsxAttribute(name, Babel.jsxExpressionContainer(styleObjectExpression));
             }
             return Babel.jsxAttribute(name, Babel.jsxExpressionContainer(expression));
         }
         default: {
-            throw new Error("Unexpected attribute value");
+            throw new Error('Unexpected attribute value');
         }
     }
 };
@@ -59,9 +88,12 @@ exports.createAttribute = createAttribute;
 var convertModifier = function (modifier) {
     var modifierType = modifier.path.original;
     var attrName;
-    if (modifierType === "action") {
-        attrName = Babel.jsxIdentifier("onClick");
-        var _a = modifier.params.map(function (item) { return Babel.identifier(item.original || item.value); }), actionName = _a[0], actionArguments = _a.slice(1);
+    if (modifierType === 'action') {
+        attrName = Babel.jsxIdentifier('onClick');
+        var _a = modifier.params.map(function (item) {
+            var value = item.original || item.value;
+            return typeof value === 'number' ? Babel.numericLiteral(value) : Babel.identifier(value);
+        }), actionName = _a[0], actionArguments = _a.slice(1);
         if (actionArguments.length) {
             return Babel.jsxAttribute(attrName, Babel.jsxExpressionContainer(Babel.arrowFunctionExpression([], Babel.callExpression(actionName, actionArguments))));
         }
