@@ -40,7 +40,7 @@ export function compile(
   const isModule = !!options.isModule
   const includeImport = !!options.includeImport && isModule
 
-  const glimmerProgram = preprocess(code)
+  const glimmerProgram = preprocess(code.replace(/\{yield/gi, '{children'))
   const babelProgram: Babel.Program = createProgram(
     glimmerProgram,
     isComponent,

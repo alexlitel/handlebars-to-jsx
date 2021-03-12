@@ -131,7 +131,12 @@ var convertElement = function (node) {
         attributes.push.apply(attributes, modifiers);
     }
     var isElementSelfClosing = node.selfClosing || isSelfClosing(node.tag);
-    var children = expressions_1.createChildren(node.children);
+    var children = expressions_1.createChildren(node.children).map(function (item) {
+        if (item.type === 'MemberExpression' || item.type === 'Identifier') {
+            return Babel.jsxExpressionContainer(item);
+        }
+        return item;
+    });
     return Babel.jsxElement(Babel.jsxOpeningElement(tagName, attributes, isElementSelfClosing), Babel.jsxClosingElement(tagName), isElementSelfClosing ? [] : children, isElementSelfClosing);
 };
 exports.convertElement = convertElement;

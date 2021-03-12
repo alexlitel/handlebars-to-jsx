@@ -43,7 +43,7 @@ describe('element values', () => {
 
   test('should escape curly braces in handlebars template', () => {
     expect(compile('<div>Lorem {ipsum} dolor sit {amet</div>')).toBe(
-      recompile(`props => <div>Lorem {"{"}ipsum{"}"} dolor sit {"{"}amet</div>`)
+      recompile('props => <div>Lorem {"{"}ipsum{"}"} dolor sit {"{"}amet</div>')
     )
   })
 })
@@ -140,12 +140,12 @@ describe('element attributes', () => {
 
     // Trailing semicolon
     expect(compile('<div style="background-image: url(\'{{some.imageSrc}}\');" />', false)).toBe(
-      recompile(`<div style={{ "backgroundImage": "url('" + some.imageSrc + "')" }} />`)
+      recompile('<div style={{ "backgroundImage": "url(\'" + some.imageSrc + "\')" }} />')
     )
 
     // Expression in key
     expect(compile('<div style="background-{{image}}: url(\'{{some.imageSrc}}\');" />', false)).toBe(
-      recompile(`<div style={{ ["background-" + image]: "url('" + some.imageSrc + "')" }} />`)
+      recompile('<div style={{ ["background-" + image]: "url(\'" + some.imageSrc + "\')" }} />')
     )
   })
 })
@@ -252,7 +252,6 @@ describe('block custom elements', () => {
       )).toBe(
         '<Wrapper href={block.url}><InnerImg src={block.asset} width={600} height={360} crop="fit" className="test"><span><h2>test</h2></span></InnerImg></Wrapper>;'
       )
-  
   })
 })
 
@@ -312,10 +311,19 @@ describe('include react import', () => {
   test('handle number', () => {
     expect(
       compile('<div>{{formatthis "blah12" 123 }}</div>', {
-        isComponent: true,
-        isModule: false,
+        isComponent:   true,
+        isModule:      false,
         includeImport: true,
       })
-    ).toBe("props => <div>{formatthis(blah12, 123)}</div>;");
+    ).toBe('props => <div>{formatthis(blah12, 123)}</div>;')
+  })
+  test('handle yield', () => {
+    expect(
+      compile('<div>{{yield}}</div>', {
+        isComponent:   true,
+        isModule:      false,
+        includeImport: true,
+      })
+    ).toBe('props => <div>{props.children}</div>;')
   })
 })

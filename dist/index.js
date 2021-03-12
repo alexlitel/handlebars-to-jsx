@@ -13,7 +13,7 @@ function compile(code, options) {
     var isComponent = !!options.isComponent;
     var isModule = !!options.isModule;
     var includeImport = !!options.includeImport && isModule;
-    var glimmerProgram = syntax_1.preprocess(code);
+    var glimmerProgram = syntax_1.preprocess(code.replace(/\{yield/gi, '{children'));
     var babelProgram = program_1.createProgram(glimmerProgram, isComponent, isModule, includeImport);
     return generator_1.default(babelProgram).code;
 }

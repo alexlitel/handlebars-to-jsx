@@ -50,9 +50,6 @@ var prepareProgramPaths = function (program, isComponent) {
                     namespaces.push({ node: node });
                     eachStatementEntered = false;
                 }
-                // if (node.type === 'MustacheStatement' || node.type === 'AttrNode') {
-                // console.log(JSON.stringify(node, null, 2))
-                // }
                 if (isEachStatement(node)) {
                     eachStatementEntered = true;
                 }

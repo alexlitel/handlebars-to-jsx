@@ -195,8 +195,14 @@ export const convertElement = (node: Glimmer.ElementNode): Babel.JSXElement => {
     attributes.push(...modifiers)
   }
   const isElementSelfClosing = node.selfClosing || isSelfClosing(node.tag)
-  const children = createChildren(node.children)
+  const children = createChildren(node.children).map((item: any): any => {
+    if (item.type === 'MemberExpression' || item.type === 'Identifier') {
+      return Babel.jsxExpressionContainer(item)
+    }
+    return item
+  })
 
+  
   return Babel.jsxElement(
     Babel.jsxOpeningElement(tagName, attributes, isElementSelfClosing),
     Babel.jsxClosingElement(tagName),

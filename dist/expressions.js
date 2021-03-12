@@ -77,7 +77,6 @@ exports.resolveStatement = resolveStatement;
  * to children of a JSX element.
  */
 var resolveElementChild = function (statement) {
-    console.log(statement);
     switch (statement.type) {
         case 'ElementNode': {
             return elements_1.convertElement(statement);

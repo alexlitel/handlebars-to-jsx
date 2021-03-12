@@ -56,10 +56,6 @@ export const prepareProgramPaths = (program: Glimmer.Program, isComponent: boole
           eachStatementEntered = false
         }
 
-        // if (node.type === 'MustacheStatement' || node.type === 'AttrNode') {
-          // console.log(JSON.stringify(node, null, 2))
-        // }
-
         if (isEachStatement(node)) {
           eachStatementEntered = true
         }

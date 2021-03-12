@@ -25,6 +25,7 @@ export const resolveMustacheStatement = (
   ) {
     return createElement(statement)
   }
+
   return resolveExpression(statement.path)
 }
 
@@ -93,7 +94,6 @@ export const resolveElementChild = (
   | Babel.JSXElement
   | Babel.JSXExpressionContainer
   | Array<Babel.JSXText | Babel.JSXExpressionContainer> => {
-  console.log(statement)
   switch (statement.type) {
     case 'ElementNode': {
       return convertElement(statement)
@@ -183,6 +183,7 @@ export const createPath = (
   for (let i = 1; i < parts.length; i++) {
     acc = appendToPath(acc, Babel.identifier(parts[i]))
   }
+
   return acc
 }
 
