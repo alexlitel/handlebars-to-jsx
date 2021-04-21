@@ -4,7 +4,7 @@ import generate          from '@babel/generator'
 import { parse }         from '@babel/parser'
 import * as Babel        from '@babel/types'
 import { createProgram } from './program'
-
+import * as fs from 'fs'
 /**
  * Converts Handlebars code to JSX code
  * @param hbsCode Handlebars code to convert
@@ -40,7 +40,8 @@ export function compile(
   const isModule = !!options.isModule
   const includeImport = !!options.includeImport && isModule
 
-  const glimmerProgram = preprocess(code.replace(/\{yield/gi, '{children'))
+  const glimmerProgram = preprocess(code)
+  fs.writeFileSync('./data.json', JSON.stringify(glimmerProgram, null, '\t'))
   const babelProgram: Babel.Program = createProgram(
     glimmerProgram,
     isComponent,

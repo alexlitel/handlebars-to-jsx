@@ -63,6 +63,9 @@ var createAttribute = function (attrNode) {
                 var styleObjectExpression = styles_1.createStyleObject(value);
                 return Babel.jsxAttribute(name, Babel.jsxExpressionContainer(styleObjectExpression));
             }
+            if (value.chars.includes('"')) {
+                return Babel.jsxAttribute(name, Babel.jsxExpressionContainer(Babel.stringLiteral(value.chars)));
+            }
             return Babel.jsxAttribute(name, Babel.stringLiteral(value.chars));
         }
         case 'MustacheStatement': {
@@ -73,6 +76,9 @@ var createAttribute = function (attrNode) {
             if (reactAttrName === 'style') {
                 var styleObjectExpression = styles_1.createStyleObject(value);
                 return Babel.jsxAttribute(name, Babel.jsxExpressionContainer(styleObjectExpression));
+            }
+            if (expression.type && expression.type === 'JSXExpressionContainer') {
+                return Babel.jsxAttribute(name, expression);
             }
             return Babel.jsxAttribute(name, Babel.jsxExpressionContainer(expression));
         }
@@ -90,9 +96,16 @@ var convertModifier = function (modifier) {
     var attrName;
     if (modifierType === 'action') {
         attrName = Babel.jsxIdentifier('onClick');
-        var _a = modifier.params.map(function (item) {
+        var _a = modifier.params.map(function (item, index) {
             var value = item.original || item.value;
-            return typeof value === 'number' ? Babel.numericLiteral(value) : Babel.identifier(value);
+            if (index === 0) {
+                return Babel.identifier(value);
+            }
+            if (item.type === 'PathExpression' && !item.parts.length) {
+                item.type = 'StringLiteral';
+                item.value = value;
+            }
+            return expressions_1.resolveExpression(item, true);
         }), actionName = _a[0], actionArguments = _a.slice(1);
         if (actionArguments.length) {
             return Babel.jsxAttribute(attrName, Babel.jsxExpressionContainer(Babel.arrowFunctionExpression([], Babel.callExpression(actionName, actionArguments))));
@@ -106,9 +119,19 @@ var convertModifier = function (modifier) {
                 var attrValue = item.value.original;
                 if (attrName === 'class') {
                     attrName = 'className';
-                    attrValue = Babel.callExpression(Babel.identifier('clsx'), [styles_1.createClassNameObject(attrValue)]);
+                    if (attrValue.includes(':')) {
+                        attrValue = Babel.callExpression(Babel.identifier('clsx'), [
+                            styles_1.createClassNameObject(attrValue),
+                        ]);
+                    }
+                    else {
+                        attrValue = Babel.identifier(attrValue);
+                    }
                 }
                 else {
+                    if (/\W/gi.test(attrValue)) {
+                        attrValue = styles_1.camelizePropName(attrValue);
+                    }
                     attrValue = Babel.identifier(attrValue);
                 }
                 return Babel.jsxAttribute(Babel.jsxIdentifier(attrName), Babel.jsxExpressionContainer(attrValue));
@@ -127,7 +150,9 @@ var convertElement = function (node) {
         .map(function (item) { return exports.createAttribute(item); })
         .filter(Boolean);
     if (node.modifiers && node.modifiers.length) {
-        var modifiers = node.modifiers.reduce(function (acc, item) { return acc.concat(exports.convertModifier(item)); }, []).filter(Boolean);
+        var modifiers = node.modifiers
+            .reduce(function (acc, item) { return acc.concat(exports.convertModifier(item)); }, [])
+            .filter(Boolean);
         attributes.push.apply(attributes, modifiers);
     }
     var isElementSelfClosing = node.selfClosing || isSelfClosing(node.tag);

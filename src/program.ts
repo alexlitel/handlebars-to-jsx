@@ -23,6 +23,7 @@ export const createProgram = (
     [Babel.importDefaultSpecifier(Babel.identifier('React'))],
     Babel.stringLiteral('react')
   )
+  
   const componentBody = createRootChildren(hbsProgram.body)
   const expression = isComponent ? createComponent(componentBody) : componentBody
   const statement = isModule ? Babel.exportDefaultDeclaration(expression) : Babel.expressionStatement(expression)

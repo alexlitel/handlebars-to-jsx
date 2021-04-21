@@ -12,20 +12,19 @@ var Babel = require("@babel/types");
 var elements_1 = require("./elements");
 var blockStatements_1 = require("./blockStatements");
 var comments_1 = require("./comments");
+var html_entities_1 = require("html-entities");
 /**
  * Converts mustache statement to something parseable
  */
 var resolveMustacheStatement = function (statement) {
     var statementPath = statement.path;
     var original = statementPath.original || '';
-    var parts = statementPath.parts || [];
+    if (statementPath.type === 'PathExpression'
+        && original.startsWith('emberComponent-')) {
+        return elements_1.createElement(statement);
+    }
     if (statement.params && !!statement.params.length) {
         return exports.resolveHelpers(statement);
-    }
-    if (statementPath.type === 'PathExpression'
-        && original.includes('-')
-        && parts.length === 1) {
-        return elements_1.createElement(statement);
     }
     return exports.resolveExpression(statement.path);
 };
@@ -34,12 +33,26 @@ exports.resolveMustacheStatement = resolveMustacheStatement;
  * Coerce helpers to inline functions
  */
 var resolveHelpers = function (statement) {
-    return Babel.jsxExpressionContainer(Babel.callExpression(Babel.identifier(statement.path.original), statement.params.map(function (item) {
+    var params = statement.params.map(function (item) {
         var value = item.original || item.value;
+        if (/\W/gi.test(String(value).trim())) {
+            return Babel.stringLiteral(value);
+        }
         return typeof value === 'number'
             ? Babel.numericLiteral(value)
             : Babel.identifier(value);
-    })));
+    });
+    if (statement.hash && statement.hash.pairs && statement.hash.pairs.length) {
+        var statementValues = statement.hash.pairs.map(function (item) {
+            if (item.value.type === 'StringLiteral' && /\w\.\w/g.test(item.value.original)) {
+                item.value.type = 'PathExpression';
+                item.value.parts = item.value.original.split(/\./g);
+            }
+            return Babel.objectProperty(Babel.identifier(item.key), exports.resolveExpression(item.value, true));
+        });
+        params.push(Babel.objectExpression(statementValues));
+    }
+    return Babel.jsxExpressionContainer(Babel.callExpression(Babel.identifier(statement.path.original), params));
 };
 exports.resolveHelpers = resolveHelpers;
 /**
@@ -63,7 +76,7 @@ var resolveStatement = function (statement) {
         }
         case 'MustacheCommentStatement':
         case 'CommentStatement': {
-            throw new Error('Top level comments currently is not supported');
+            return comments_1.createComment(statement);
         }
         default: {
             throw new Error("Unexpected expression \"" + statement.type + "\"");
@@ -107,7 +120,8 @@ exports.resolveElementChild = resolveElementChild;
 /**
  * Converts Hbs expression to Babel expression
  */
-var resolveExpression = function (expression) {
+var resolveExpression = function (expression, canReturnIdentifier) {
+    if (canReturnIdentifier === void 0) { canReturnIdentifier = false; }
     switch (expression.type) {
         case 'PathExpression': {
             return exports.createPath(expression);
@@ -122,6 +136,9 @@ var resolveExpression = function (expression) {
             return Babel.numericLiteral(expression.value);
         }
         case 'StringLiteral': {
+            if (canReturnIdentifier && !/\W/gi.test(expression.value)) {
+                return Babel.identifier(expression.value);
+            }
             return Babel.stringLiteral(expression.value);
         }
         case 'UndefinedLiteral': {
@@ -166,6 +183,10 @@ exports.prependToPath = prependToPath;
 var createChildren = function (body) {
     return body.reduce(function (acc, statement) {
         var child = exports.resolveElementChild(statement);
+        if ((child.type && child.type === 'MemberExpression')
+            || child.type === 'Identifier') {
+            child = Babel.jsxExpressionContainer(child);
+        }
         return Array.isArray(child) ? __spreadArrays(acc, child) : __spreadArrays(acc, [child]);
     }, []);
 };
@@ -184,10 +205,14 @@ exports.createRootChildren = createRootChildren;
  */
 var createConcat = function (parts) {
     return parts.reduce(function (acc, item) {
-        if (acc == null) {
-            return exports.resolveStatement(item);
+        var resolvedStatement = exports.resolveStatement(item);
+        if (resolvedStatement.expression) {
+            resolvedStatement = resolvedStatement.expression;
         }
-        return Babel.binaryExpression('+', acc, exports.resolveStatement(item));
+        if (acc == null) {
+            return resolvedStatement;
+        }
+        return Babel.binaryExpression('+', acc, resolvedStatement);
     }, null);
 };
 exports.createConcat = createConcat;
@@ -197,12 +222,16 @@ exports.createConcat = createConcat;
  */
 var prepareJsxText = function (text) {
     // Escape jsx syntax chars
-    var parts = text.split(/(:?{|})/);
+    var encodedText = html_entities_1.encode(text);
+    var parts = encodedText.split(/(:?{|})/);
     if (parts.length === 1) {
+        if (/\&(\w|\d)+\;/gi.test(encodedText)) {
+            return Babel.jsxExpressionContainer(Babel.stringLiteral(encodedText));
+        }
         return Babel.jsxText(text);
     }
     return parts.map(function (item) {
-        return item === '{' || item === '}'
+        return item === "{" || item === "}" || /\&(\w|\d)+\;/gi.test(item)
             ? Babel.jsxExpressionContainer(Babel.stringLiteral(item))
             : Babel.jsxText(item);
     });

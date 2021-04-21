@@ -3,6 +3,7 @@ import * as Babel                                        from '@babel/types'
 import { createFragment, convertElement, createElement } from './elements'
 import { createBlockElement, resolveBlockStatement }     from './blockStatements'
 import { createComment }                                 from './comments'
+import { encode } from 'html-entities';
 
 /**
  * Converts mustache statement to something parseable
@@ -12,18 +13,15 @@ export const resolveMustacheStatement = (
 ): any => {
   const statementPath = statement.path as any
   const original = statementPath.original || ''
-  const parts = statementPath.parts || []
+  if (
+    statementPath.type === 'PathExpression'
+    && original.startsWith('emberComponent-')
+  ) {
+    return createElement(statement)
+  }
 
   if (statement.params && !!statement.params.length) {
     return resolveHelpers(statement)
-  }
-
-  if (
-    statementPath.type === 'PathExpression'
-    && original.includes('-')
-    && parts.length === 1
-  ) {
-    return createElement(statement)
   }
 
   return resolveExpression(statement.path)
@@ -35,17 +33,35 @@ export const resolveMustacheStatement = (
 export const resolveHelpers = (
   statement: Glimmer.MustacheStatement
 ): Babel.JSXExpressionContainer => {
+  const params = statement.params.map((item: any) => {
+    const value = item.original || item.value
+    if (/\W/gi.test(String(value).trim())) {
+      return Babel.stringLiteral(value)
+    }
+    return typeof value === 'number'
+      ? Babel.numericLiteral(value)
+      : Babel.identifier(value)
+  })
+
+  if (statement.hash && statement.hash.pairs && statement.hash.pairs.length) {
+    const statementValues = statement.hash.pairs.map((item: any) => {
+
+      if (item.value.type === 'StringLiteral' && /\w\.\w/g.test(item.value.original)) {
+        (item.value as any).type = 'PathExpression';
+        (item.value as any).parts = item.value.original.split(/\./g)
+      }
+
+      return Babel.objectProperty(Babel.identifier(item.key), resolveExpression(item.value, true))
+    }) as any[]
+    params.push(Babel.objectExpression(statementValues) as any)
+  }
+
   return Babel.jsxExpressionContainer(
     Babel.callExpression(
       Babel.identifier(statement.path.original as any),
-      statement.params.map((item: any) => {
-        const value = item.original || item.value
-        return typeof value === 'number'
-                ? Babel.numericLiteral(value)
-                : Babel.identifier(value)
-      })
-      )
+      params
     )
+  )
 }
 
 /**
@@ -73,7 +89,7 @@ export const resolveStatement = (statement: Glimmer.Statement) => {
 
     case 'MustacheCommentStatement':
     case 'CommentStatement': {
-      throw new Error('Top level comments currently is not supported')
+      return createComment(statement)
     }
 
     default: {
@@ -130,7 +146,8 @@ export const resolveElementChild = (
  * Converts Hbs expression to Babel expression
  */
 export const resolveExpression = (
-  expression: Glimmer.Expression
+  expression: Glimmer.Expression,
+  canReturnIdentifier: boolean = false
 ): Babel.Literal | Babel.Identifier | Babel.MemberExpression => {
   switch (expression.type) {
     case 'PathExpression': {
@@ -150,6 +167,9 @@ export const resolveExpression = (
     }
 
     case 'StringLiteral': {
+      if (canReturnIdentifier && !/\W/gi.test(expression.value)) {
+        return Babel.identifier(expression.value)
+      }
       return Babel.stringLiteral(expression.value)
     }
 
@@ -170,7 +190,7 @@ export const createPath = (
   pathExpression: Glimmer.PathExpression
 ): Babel.Identifier | Babel.MemberExpression => {
   const parts = pathExpression.parts
-
+  
   if (parts.length === 0) {
     throw new Error('Unexpected empty expression parts')
   }
@@ -211,8 +231,13 @@ export const createChildren = (
   body: Glimmer.Statement[]
 ): Babel.JSXElement['children'] =>
   body.reduce((acc, statement) => {
-    const child = resolveElementChild(statement)
-
+    let child = resolveElementChild(statement) as any
+    if (
+      (child.type && child.type === 'MemberExpression')
+      || child.type === 'Identifier'
+    ) {
+      child = Babel.jsxExpressionContainer(child)
+    }
     return Array.isArray(child) ? [...acc, ...child] : [...acc, child]
   }, [] as Babel.JSXElement['children'])
 
@@ -233,11 +258,16 @@ export const createConcat = (
   parts: Glimmer.ConcatStatement['parts']
 ): Babel.BinaryExpression | Babel.Expression => {
   return parts.reduce((acc, item) => {
-    if (acc == null) {
-      return resolveStatement(item)
+    let resolvedStatement = resolveStatement(item) as any
+    if (resolvedStatement.expression) {
+      resolvedStatement = resolvedStatement.expression
     }
 
-    return Babel.binaryExpression('+', acc, resolveStatement(item))
+    if (acc == null) {
+      return resolvedStatement
+    }
+
+    return Babel.binaryExpression('+', acc, resolvedStatement)
   }, null as null | Babel.Expression | Babel.BinaryExpression) as
     | Babel.BinaryExpression
     | Babel.Expression
@@ -249,17 +279,24 @@ export const createConcat = (
  */
 export const prepareJsxText = (
   text: string
-): Babel.JSXText | Array<Babel.JSXText | Babel.JSXExpressionContainer> => {
+):
+  | Babel.JSXExpressionContainer | Babel.JSXText
+  | Array<Babel.JSXText | Babel.JSXExpressionContainer> => {
   // Escape jsx syntax chars
-  const parts = text.split(/(:?{|})/)
+  const encodedText = encode(text);
+  const parts = encodedText.split(/(:?{|})/);
 
   if (parts.length === 1) {
-    return Babel.jsxText(text)
+    if (/\&(\w|\d)+\;/gi.test(encodedText)) {
+      return Babel.jsxExpressionContainer(Babel.stringLiteral(encodedText));
+    }
+
+    return Babel.jsxText(text);
   }
 
   return parts.map((item) =>
-    item === '{' || item === '}'
+    item === "{" || item === "}" || /\&(\w|\d)+\;/gi.test(item)
       ? Babel.jsxExpressionContainer(Babel.stringLiteral(item))
       : Babel.jsxText(item)
-  )
-}
+  );
+};

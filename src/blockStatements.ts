@@ -86,23 +86,33 @@ export const createConditionStatement = (
   if (invertCondition) {
     boolCondSubject = Babel.unaryExpression('!', boolCondSubject)
   }
-
+  
+  let conditionBody = createRootChildren(program.body) as any
+  if (conditionBody.type === 'JSXExpressionContainer') {
+    conditionBody = conditionBody.expression
+  }
   if (inverse == null) {
-    // Logical expression
-    // {Boolean(variable) && <div />}
+      // Logical expression
+      // {Boolean(variable) && <div />}
+
+      // if (conditionBody.expression) {}
     return Babel.logicalExpression(
-      '&&',
-      boolCondSubject,
-      createRootChildren(program.body)
-    )
+        '&&',
+        boolCondSubject,
+        conditionBody
+      )
   } else {
-    // Ternary expression
-    // {Boolean(variable) ? <div /> : <span />}
+    let inverseBody = createRootChildren(inverse.body) as any
+    if (inverseBody && inverseBody.type === 'JSXExpressionContainer') {
+      inverseBody = inverseBody.expression
+    }
+      // Ternary expression
+      // {Boolean(variable) ? <div /> : <span />}
     return Babel.conditionalExpression(
-      boolCondSubject,
-      createRootChildren(program.body),
-      createRootChildren(inverse.body)
-    )
+        boolCondSubject,
+        conditionBody,
+        inverseBody
+      )
   }
 }
 

@@ -68,6 +68,22 @@ export const prepareProgramPaths = (program: Glimmer.Program, isComponent: boole
       }
     },
 
+    Program: {
+      exit(node: Glimmer.Program) {
+        node.body = node.body.filter((item: any) => {
+          return !(item.type === 'TextNode' && !item.chars.trim())
+        })
+      }
+    },
+
+    ElementNode: {
+      exit(node: Glimmer.ElementNode) {
+        node.children = node.children.filter((item: any) => {
+          return !(item.type === 'TextNode' && !item.chars.trim())
+        })
+      }
+    },
+
     // Process path expressions
     PathExpression(node: Glimmer.PathExpression) {
       // Add prefixes

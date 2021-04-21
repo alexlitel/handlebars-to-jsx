@@ -61,6 +61,20 @@ var prepareProgramPaths = function (program, isComponent) {
                 }
             }
         },
+        Program: {
+            exit: function (node) {
+                node.body = node.body.filter(function (item) {
+                    return !(item.type === 'TextNode' && !item.chars.trim());
+                });
+            }
+        },
+        ElementNode: {
+            exit: function (node) {
+                node.children = node.children.filter(function (item) {
+                    return !(item.type === 'TextNode' && !item.chars.trim());
+                });
+            }
+        },
         // Process path expressions
         PathExpression: function (node) {
             // Add prefixes

@@ -57,6 +57,7 @@
     "@babel/parser": "^7.12.15",
     "@babel/types": "^7.12.13",
     "@glimmer/syntax": "0.38.4",
+    "html-entities": "^2.3.2",
     "is-self-closing": "^1.0.1",
     "react-attr-converter": "^0.3.1",
     "reserved-words": "^0.1.2"

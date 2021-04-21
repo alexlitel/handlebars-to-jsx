@@ -3,23 +3,31 @@ import * as Babel                                          from '@babel/types'
 import * as isSelfClosing                                  from 'is-self-closing'
 import * as convertHTMLAttribute                           from 'react-attr-converter'
 import { createConcat, resolveExpression, createChildren } from './expressions'
-import { createClassNameObject, createStyleObject }        from './styles'
-import { parseExpression }                                 from '@babel/parser'
+import {
+  camelizePropName,
+  createClassNameObject,
+  createStyleObject,
+} from './styles'
+import { parseExpression } from '@babel/parser'
 
 /**
  * Create element
  *
  */
 
-export const createElement = (mustacheStatement: Glimmer.MustacheStatement): Babel.JSXElement => {
+export const createElement = (
+  mustacheStatement: Glimmer.MustacheStatement
+): Babel.JSXElement => {
   const blockNode = {} as Partial<Glimmer.ElementNode>
   blockNode.type = 'ElementNode'
+
   blockNode.tag = (mustacheStatement.path.original as string)
     .split('-')
     .map(
       (stringPart) => stringPart.charAt(0).toUpperCase() + stringPart.slice(1)
     )
     .join('')
+
   blockNode.attributes = mustacheStatement.hash.pairs.map((item) => {
     const attrNode = {
       type: 'AttrNode',
@@ -47,14 +55,14 @@ export const createFragment = (
   attributes: (Babel.JSXAttribute | Babel.JSXSpreadAttribute)[] = []
 ) => {
   const fragmentMemberExpression = Babel.jsxMemberExpression(
-      Babel.jsxIdentifier('React'),
-      Babel.jsxIdentifier('Fragment')
-    )
+    Babel.jsxIdentifier('React'),
+    Babel.jsxIdentifier('Fragment')
+  )
 
   const openingFragment = Babel.jsxOpeningElement(
-      fragmentMemberExpression,
-      attributes
-    )
+    fragmentMemberExpression,
+    attributes
+  )
   const closingFragment = Babel.jsxClosingElement(fragmentMemberExpression)
 
   return Babel.jsxElement(openingFragment, closingFragment, children, false)
@@ -76,7 +84,7 @@ export const createAttribute = (
 
   const name = Babel.jsxIdentifier(reactAttrName)
   const value = attrNode.value
-
+  
   switch (value.type) {
     case 'TextNode': {
       if (reactAttrName === 'style') {
@@ -85,6 +93,13 @@ export const createAttribute = (
           name,
           Babel.jsxExpressionContainer(styleObjectExpression)
         )
+      }
+
+      if (value.chars.includes('"')) {
+        return Babel.jsxAttribute(
+           name,
+           Babel.jsxExpressionContainer(Babel.stringLiteral(value.chars))
+         )
       }
 
       return Babel.jsxAttribute(name, Babel.stringLiteral(value.chars))
@@ -98,7 +113,7 @@ export const createAttribute = (
     }
 
     case 'ConcatStatement': {
-      const expression = createConcat(value.parts)
+      const expression = createConcat(value.parts) as any
       if (reactAttrName === 'style') {
         const styleObjectExpression = createStyleObject(value)
         return Babel.jsxAttribute(
@@ -107,6 +122,9 @@ export const createAttribute = (
         )
       }
 
+      if (expression.type && expression.type === 'JSXExpressionContainer') {
+        return Babel.jsxAttribute(name, expression)
+      }
       return Babel.jsxAttribute(name, Babel.jsxExpressionContainer(expression))
     }
 
@@ -128,20 +146,29 @@ export const convertModifier = (
 
   if (modifierType === 'action') {
     attrName = Babel.jsxIdentifier('onClick')
-    const [actionName, ...actionArguments] = modifier.params.map((item: any) => {
-      const value = item.original || item.value
-      return typeof value === 'number' ? Babel.numericLiteral(value) : Babel.identifier(value)
-    })
+    const [actionName, ...actionArguments] = modifier.params.map(
+      (item: any, index: number) => {
+        const value = item.original || item.value
+
+        if (index === 0) {
+          return Babel.identifier(value)
+        }
+
+        if (item.type === 'PathExpression' && !item.parts.length) {
+          item.type = 'StringLiteral'
+          item.value = value
+        }
+
+        return resolveExpression(item, true)
+      }
+    )
     if (actionArguments.length) {
       return Babel.jsxAttribute(
         attrName,
         Babel.jsxExpressionContainer(
           Babel.arrowFunctionExpression(
             [],
-            Babel.callExpression(
-              actionName,
-              actionArguments
-            )
+            Babel.callExpression(actionName, actionArguments)
           )
         )
       )
@@ -149,29 +176,35 @@ export const convertModifier = (
 
     return Babel.jsxAttribute(
       attrName,
-      Babel.jsxExpressionContainer(actionName),
+      Babel.jsxExpressionContainer(actionName)
     )
   }
 
   if (modifierType === 'bind-attr') {
     if (modifier.hash.pairs) {
-      return modifier.hash.pairs.map(item => {
+      return modifier.hash.pairs.map((item) => {
         let attrName: any = item.key
         let attrValue: any = (item.value as any).original
         if (attrName === 'class') {
           attrName = 'className'
 
-          attrValue = Babel.callExpression(
-            Babel.identifier('clsx'),
-            [createClassNameObject(attrValue)]
-          )
+          if (attrValue.includes(':')) {
+            attrValue = Babel.callExpression(Babel.identifier('clsx'), [
+              createClassNameObject(attrValue),
+            ])
+          } else {
+            attrValue = Babel.identifier(attrValue)
+          }
         } else {
+          if (/\W/gi.test(attrValue)) {
+            attrValue = camelizePropName(attrValue)
+          }
           attrValue = Babel.identifier(attrValue)
         }
 
         return Babel.jsxAttribute(
           Babel.jsxIdentifier(attrName),
-          Babel.jsxExpressionContainer(attrValue),
+          Babel.jsxExpressionContainer(attrValue)
         )
       })
     }
@@ -186,11 +219,13 @@ export const convertModifier = (
 export const convertElement = (node: Glimmer.ElementNode): Babel.JSXElement => {
   const tagName = Babel.jsxIdentifier(node.tag)
   const attributes = node.attributes
-    .map(item => createAttribute(item))
+    .map((item) => createAttribute(item))
     .filter(Boolean) as Babel.JSXAttribute[]
 
   if (node.modifiers && node.modifiers.length) {
-    const modifiers = node.modifiers.reduce((acc, item) => acc.concat(convertModifier(item) as []), []).filter(Boolean) as Babel.JSXAttribute[]
+    const modifiers = node.modifiers
+      .reduce((acc, item) => acc.concat(convertModifier(item) as []), [])
+      .filter(Boolean) as Babel.JSXAttribute[]
 
     attributes.push(...modifiers)
   }
@@ -202,7 +237,6 @@ export const convertElement = (node: Glimmer.ElementNode): Babel.JSXElement => {
     return item
   })
 
-  
   return Babel.jsxElement(
     Babel.jsxOpeningElement(tagName, attributes, isElementSelfClosing),
     Babel.jsxClosingElement(tagName),

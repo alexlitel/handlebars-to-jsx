@@ -5,6 +5,7 @@ exports.compile = void 0;
 var syntax_1 = require("@glimmer/syntax");
 var generator_1 = require("@babel/generator");
 var program_1 = require("./program");
+var fs = require("fs");
 function compile(code, options) {
     if (options === void 0) { options = true; }
     if (typeof options === 'boolean') {
@@ -13,7 +14,8 @@ function compile(code, options) {
     var isComponent = !!options.isComponent;
     var isModule = !!options.isModule;
     var includeImport = !!options.includeImport && isModule;
-    var glimmerProgram = syntax_1.preprocess(code.replace(/\{yield/gi, '{children'));
+    var glimmerProgram = syntax_1.preprocess(code);
+    fs.writeFileSync('./data.json', JSON.stringify(glimmerProgram, null, '\t'));
     var babelProgram = program_1.createProgram(glimmerProgram, isComponent, isModule, includeImport);
     return generator_1.default(babelProgram).code;
 }

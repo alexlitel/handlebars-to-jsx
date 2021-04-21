@@ -61,15 +61,24 @@ var createConditionStatement = function (blockStatement, invertCondition) {
     if (invertCondition) {
         boolCondSubject = Babel.unaryExpression('!', boolCondSubject);
     }
+    var conditionBody = expressions_1.createRootChildren(program.body);
+    if (conditionBody.type === 'JSXExpressionContainer') {
+        conditionBody = conditionBody.expression;
+    }
     if (inverse == null) {
         // Logical expression
         // {Boolean(variable) && <div />}
-        return Babel.logicalExpression('&&', boolCondSubject, expressions_1.createRootChildren(program.body));
+        // if (conditionBody.expression) {}
+        return Babel.logicalExpression('&&', boolCondSubject, conditionBody);
     }
     else {
+        var inverseBody = expressions_1.createRootChildren(inverse.body);
+        if (inverseBody && inverseBody.type === 'JSXExpressionContainer') {
+            inverseBody = inverseBody.expression;
+        }
         // Ternary expression
         // {Boolean(variable) ? <div /> : <span />}
-        return Babel.conditionalExpression(boolCondSubject, expressions_1.createRootChildren(program.body), expressions_1.createRootChildren(inverse.body));
+        return Babel.conditionalExpression(boolCondSubject, conditionBody, inverseBody);
     }
 };
 exports.createConditionStatement = createConditionStatement;
